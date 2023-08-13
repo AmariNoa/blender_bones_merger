@@ -7,7 +7,7 @@ bl_info = {
     "location": "Armature Context Menu > Merge with active",
     "category": "Rigging",
     "support": "COMMUNITY",
-    "version": (1, 0, "b"),
+    "version": (1, 0, "c"),
     "blender": (3, 5, 0),
     "warning": "",
     "doc_url": "",
@@ -47,6 +47,12 @@ class VoyageVRSNSBonesMergerOperator(bpy.types.Operator):
 
     def invoke(self, context, event):
         return self.execute(context)
+
+    def print_info_raw(self, message):
+        self.report({'INFO'}, message)
+
+    def print_info(self, message):
+        self.report({'INFO'}, bpy.app.translations.pgettext(message))
 
     def print_error(self, message):
         self.report({'ERROR'}, bpy.app.translations.pgettext(message))
@@ -116,9 +122,16 @@ class VoyageVRSNSBonesMergerOperator(bpy.types.Operator):
 
             # Preliminary check
             # Quit if the mesh have no such vertex group actually
+            #if target_vertex_group_name not in mesh.vertex_groups:
+            #    self.print_info_raw('Mesh: ' + mesh.name)
+            #    self.print_error('No vertex groups named like the Active Bone were found. Create it before using this operator.')
+            #    return {'FINISHED'}
+
+            # Skip mesh
             if target_vertex_group_name not in mesh.vertex_groups:
-                self.print_error('No vertex groups named like the Active Bone were found. Create it before using this operator.')
-                return {'FINISHED'}
+                self.print_info_raw('Vertex group transfer skip: ' + mesh.name)
+                continue
+
 
             # Perform the operation
             # Get the targeted VertexGroup object
