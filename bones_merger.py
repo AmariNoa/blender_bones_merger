@@ -1,14 +1,14 @@
 import bpy
 
 bl_info = {
-    "author": "Voyage (VRSNS)",
+    "author": "Voyage (VRSNS) [Modified by AmariNoa]",
     "name": "Adds the ability to merge bones and Vertex Groups in one click",
     "description": "Merge selected bones with active",
     "location": "Armature Context Menu > Merge with active",
     "category": "Rigging",
     "support": "COMMUNITY",
-    "version": (1, 0),
-    "blender": (2, 80, 0),
+    "version": (1, 0, "a"),
+    "blender": (3, 5, 0),
     "warning": "",
     "doc_url": "",
 }
@@ -99,59 +99,62 @@ class VoyageVRSNSBonesMergerOperator(bpy.types.Operator):
             self.print_error('No associated Mesh. Forgot to add the Armature modifier ? Is the armature modifier using Vertex groups ?')
             return {'FINISHED'}
 
-        if len(meshes) > 1:
-            self.print_error("Currently, this tool doesn't work when two or more meshes are bound to the same Armature.")
-            return {'FINISHED'}
+        #if len(meshes) > 1:
+        #    self.print_error("Currently, this tool doesn't work when two or more meshes are bound to the same Armature.")
+        #    return {'FINISHED'}
 
-        mesh = meshes[0]
 
-        # Get the current active bone
-        active_bone = bpy.context.active_bone
+        for mesh in meshes:
 
-        # This will have to be defined through a UI...
-        target_vertex_group_name = active_bone.name
+            # mesh = meshes[0]
 
-        # Preliminary check
-        # Quit if the mesh have no such vertex group actually
-        if target_vertex_group_name not in mesh.vertex_groups:
-            self.print_error('No vertex groups named like the Active Bone were found. Create it before using this operator.')
-            return {'FINISHED'}
+            # Get the current active bone
+            active_bone = bpy.context.active_bone
 
-        # Perform the operation
-        # Get the targeted VertexGroup object
-        target_vertex_group = mesh.vertex_groups[target_vertex_group_name]
+            # This will have to be defined through a UI...
+            target_vertex_group_name = active_bone.name
 
-        ## Generate the vertex groups cache
-        # We'll manage the cache with a fixed size array
-        cached_groups = [set() for _ in range(len(mesh.vertex_groups))]
+            # Preliminary check
+            # Quit if the mesh have no such vertex group actually
+            if target_vertex_group_name not in mesh.vertex_groups:
+                self.print_error('No vertex groups named like the Active Bone were found. Create it before using this operator.')
+                return {'FINISHED'}
 
-        for v in mesh.data.vertices:
-            for group_info in v.groups:
-                group_index = group_info.group
-                cached_groups[group_index].add((v.index, group_info.weight))
+            # Perform the operation
+            # Get the targeted VertexGroup object
+            target_vertex_group = mesh.vertex_groups[target_vertex_group_name]
 
-        ## Add the selected bones vertex groups weights to the target vertex group
-        selected_bones = bpy.context.selected_bones
+            ## Generate the vertex groups cache
+            # We'll manage the cache with a fixed size array
+            cached_groups = [set() for _ in range(len(mesh.vertex_groups))]
 
-        vertex_groups_to_remove = set()
+            for v in mesh.data.vertices:
+                for group_info in v.groups:
+                    group_index = group_info.group
+                    cached_groups[group_index].add((v.index, group_info.weight))
 
-        for selected_bone in selected_bones:
-            if selected_bone == active_bone:
-                continue
+            ## Add the selected bones vertex groups weights to the target vertex group
+            selected_bones = bpy.context.selected_bones
 
-            # Some bones have no associated vertex group.
-            # Skip it if that's the case
-            if selected_bone.name not in mesh.vertex_groups:
-                continue
+            vertex_groups_to_remove = set()
 
-            # For each cached vertex data, add it to the target VertexGroup
-            vertex_group = mesh.vertex_groups[selected_bone.name]
-            for vertex_data in cached_groups[vertex_group.index]:
-                target_vertex_group.add([vertex_data[0]], vertex_data[1], 'ADD')
-                vertex_groups_to_remove.add(vertex_group)
+            for selected_bone in selected_bones:
+                if selected_bone == active_bone:
+                    continue
 
-        for vertex_group in vertex_groups_to_remove:
-            mesh.vertex_groups.remove(vertex_group)
+                # Some bones have no associated vertex group.
+                # Skip it if that's the case
+                if selected_bone.name not in mesh.vertex_groups:
+                    continue
+
+                # For each cached vertex data, add it to the target VertexGroup
+                vertex_group = mesh.vertex_groups[selected_bone.name]
+                for vertex_data in cached_groups[vertex_group.index]:
+                    target_vertex_group.add([vertex_data[0]], vertex_data[1], 'ADD')
+                    vertex_groups_to_remove.add(vertex_group)
+
+            for vertex_group in vertex_groups_to_remove:
+                mesh.vertex_groups.remove(vertex_group)
 
         active_bone.select = False
         bpy.ops.armature.delete()
