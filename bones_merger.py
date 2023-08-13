@@ -7,7 +7,7 @@ bl_info = {
     "location": "Armature Context Menu > Merge with active",
     "category": "Rigging",
     "support": "COMMUNITY",
-    "version": (1, 0, "a"),
+    "version": (1, 0, "b"),
     "blender": (3, 5, 0),
     "warning": "",
     "doc_url": "",
@@ -144,14 +144,16 @@ class VoyageVRSNSBonesMergerOperator(bpy.types.Operator):
 
                 # Some bones have no associated vertex group.
                 # Skip it if that's the case
-                if selected_bone.name not in mesh.vertex_groups:
-                    continue
+                if selected_bone.name in mesh.vertex_groups:
+                    # For each cached vertex data, add it to the target VertexGroup
+                    vertex_group = mesh.vertex_groups[selected_bone.name]
+                    for vertex_data in cached_groups[vertex_group.index]:
+                        target_vertex_group.add([vertex_data[0]], vertex_data[1], 'ADD')
+                        vertex_groups_to_remove.add(vertex_group)
 
-                # For each cached vertex data, add it to the target VertexGroup
-                vertex_group = mesh.vertex_groups[selected_bone.name]
-                for vertex_data in cached_groups[vertex_group.index]:
-                    target_vertex_group.add([vertex_data[0]], vertex_data[1], 'ADD')
-                    vertex_groups_to_remove.add(vertex_group)
+                # Update parent bone name
+                for child_bone in selected_bone.children:
+                    child_bone.parent = active_bone
 
             for vertex_group in vertex_groups_to_remove:
                 mesh.vertex_groups.remove(vertex_group)
